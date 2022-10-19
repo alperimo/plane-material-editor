@@ -30,31 +30,6 @@ def create_plane_objecs():
             x = startX
             y -= spaceBetween
             rowCount = 0
-            
-def collect_textures_of_material(outputFolderPath):
-    plane_objects = get_plane_objects()
-    for plane in plane_objects:
-        material = plane.getmxsprop("material")
-        base_color_map_path = material.base_color_map.fileName
-        reflectivity_map = material.reflectivity_map.fileName
-        refl_color_map = material.refl_color_map.fileName
-        
-        #create a folder for each material with the name of the material
-        material_folder = os.path.join(outputFolderPath, material.name)
-        if not os.path.exists(material_folder):
-            os.makedirs(material_folder)
-            
-        #copy the base color map
-        base_color_map_new_path = os.path.join(material_folder, os.path.basename(base_color_map_path))
-        shutil.copyfile(base_color_map_path, base_color_map_new_path)
-        
-        #copy the reflectivity map
-        reflectivity_map_new_path = os.path.join(material_folder, os.path.basename(reflectivity_map))
-        shutil.copyfile(reflectivity_map, reflectivity_map_new_path)
-        
-        #copy the refl color map
-        refl_color_map_new_path = os.path.join(material_folder, os.path.basename(refl_color_map))
-        shutil.copyfile(refl_color_map, refl_color_map_new_path)
         
 class PyMaxDockWidget(QtWidgets.QDockWidget):
     def __init__(self, parent=None):
@@ -96,7 +71,7 @@ class PyMaxDockWidget(QtWidgets.QDockWidget):
         
         collect_assets_btn = QtWidgets.QPushButton("Collect")
         collect_assets_btn.setFixedSize(QtCore.QSize(80, 50))
-        collect_assets_btn.clicked.connect(collect_textures_of_material)
+        collect_assets_btn.clicked.connect(self.collect_textures_of_material)
         
         collect_textField_layout.addWidget(self.collect_textEdit)
         collect_textField_layout.addWidget(collect_textField_selectFolder_btn)
@@ -117,6 +92,33 @@ class PyMaxDockWidget(QtWidgets.QDockWidget):
     def select_output_folder(self):
         output_folder = QtWidgets.QFileDialog.getExistingDirectory()
         self.collect_textEdit.setText(output_folder)
+        
+    def collect_textures_of_material(self):
+        outputFolderPath = self.collect_textEdit.text()
+        print("outputFolderPath: {}".format(outputFolderPath))
+        plane_objects = get_plane_objects()
+        for plane in plane_objects:
+            material = plane.getmxsprop("material")
+            base_color_map_path = material.base_color_map.fileName
+            reflectivity_map = material.reflectivity_map.fileName
+            refl_color_map = material.refl_color_map.fileName
+            
+            #create a folder for each material with the name of the material
+            material_folder = os.path.join(outputFolderPath, material.name)
+            if not os.path.exists(material_folder):
+                os.makedirs(material_folder)
+                
+            #copy the base color map
+            base_color_map_new_path = os.path.join(material_folder, os.path.basename(base_color_map_path))
+            shutil.copyfile(base_color_map_path, base_color_map_new_path)
+            
+            #copy the reflectivity map
+            reflectivity_map_new_path = os.path.join(material_folder, os.path.basename(reflectivity_map))
+            shutil.copyfile(reflectivity_map, reflectivity_map_new_path)
+            
+            #copy the refl color map
+            refl_color_map_new_path = os.path.join(material_folder, os.path.basename(refl_color_map))
+            shutil.copyfile(refl_color_map, refl_color_map_new_path)
 
 def main():
     main_window = qtmax.GetQMaxMainWindow()
