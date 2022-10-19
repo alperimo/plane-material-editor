@@ -1,10 +1,13 @@
+from ctypes import alignment
 from PySide2 import QtCore
 from PySide2 import QtGui
 from PySide2 import QtWidgets
-import qtmax
 
 from pymxs import runtime as rt
 import pymxs
+
+import qtmax
+import os, shutil
 
 def get_plane_objects():
     objects = [obj for obj in rt.objects if rt.isKindOf(obj, rt.Plane)]
@@ -27,7 +30,32 @@ def create_plane_objecs():
             x = startX
             y -= spaceBetween
             rowCount = 0
-
+            
+def collect_textures_of_material(outputFolderPath):
+    plane_objects = get_plane_objects()
+    for plane in plane_objects:
+        material = plane.getmxsprop("material")
+        base_color_map_path = material.base_color_map.fileName
+        reflectivity_map = material.reflectivity_map.fileName
+        refl_color_map = material.refl_color_map.fileName
+        
+        #create a folder for each material with the name of the material
+        material_folder = os.path.join(outputFolderPath, material.name)
+        if not os.path.exists(material_folder):
+            os.makedirs(material_folder)
+            
+        #copy the base color map
+        base_color_map_new_path = os.path.join(material_folder, os.path.basename(base_color_map_path))
+        shutil.copyfile(base_color_map_path, base_color_map_new_path)
+        
+        #copy the reflectivity map
+        reflectivity_map_new_path = os.path.join(material_folder, os.path.basename(reflectivity_map))
+        shutil.copyfile(reflectivity_map, reflectivity_map_new_path)
+        
+        #copy the refl color map
+        refl_color_map_new_path = os.path.join(material_folder, os.path.basename(refl_color_map))
+        shutil.copyfile(refl_color_map, refl_color_map_new_path)
+        
 class PyMaxDockWidget(QtWidgets.QDockWidget):
     def __init__(self, parent=None):
         super(PyMaxDockWidget, self).__init__(parent)
@@ -38,19 +66,59 @@ class PyMaxDockWidget(QtWidgets.QDockWidget):
 
     def initUI(self):
         main_layout = QtWidgets.QVBoxLayout()
-        label = QtWidgets.QLabel("Click \"Create\" button to create planes from material names")
-        main_layout.addWidget(label)
-
+        
+        # Create planes from material
+        create_plane_groupbox = QtWidgets.QGroupBox("Create planes from scene materials")
+        create_plane_layout = QtWidgets.QVBoxLayout(create_plane_groupbox)
+        create_plane_layout.setAlignment(QtCore.Qt.AlignCenter)
+        
+        label = QtWidgets.QLabel("Click \"Create\" button to create planes from material names", alignment = QtCore.Qt.AlignCenter)
+        
         create_plane_btn = QtWidgets.QPushButton("Create")
+        create_plane_btn.setFixedSize(QtCore.QSize(300, 30))
         create_plane_btn.clicked.connect(create_plane_objecs)
-        main_layout.addWidget(create_plane_btn)
+        
+        create_plane_layout.addWidget(label)
+        create_plane_layout.addWidget(create_plane_btn)
+        
+        # Collecting of assets
+        collect_asset_groupbox = QtWidgets.QGroupBox("Collecting of assets")
+        
+        collect_asset_layout = QtWidgets.QVBoxLayout(collect_asset_groupbox)
+        
+        collect_label_folder_path = QtWidgets.QLabel("Selected Output Directory")
+        
+        collect_textField_layout = QtWidgets.QHBoxLayout()
+        self.collect_textEdit = QtWidgets.QLineEdit()
+        collect_textField_selectFolder_btn = QtWidgets.QPushButton("...")
+        collect_textField_selectFolder_btn.setFixedSize(QtCore.QSize(30, 20))
+        collect_textField_selectFolder_btn.clicked.connect(self.select_output_folder)
+        
+        collect_assets_btn = QtWidgets.QPushButton("Collect")
+        collect_assets_btn.setFixedSize(QtCore.QSize(80, 50))
+        collect_assets_btn.clicked.connect(collect_textures_of_material)
+        
+        collect_textField_layout.addWidget(self.collect_textEdit)
+        collect_textField_layout.addWidget(collect_textField_selectFolder_btn)
+        
+        collect_asset_layout.addWidget(collect_label_folder_path)
+        collect_asset_layout.addLayout(collect_textField_layout)
+        collect_asset_layout.addWidget(collect_assets_btn)
+        
+        main_layout.addWidget(create_plane_groupbox)
+        main_layout.addWidget(collect_asset_groupbox)
+        #main_layout.addWidget(collect_asset_layout)
+        
         widget = QtWidgets.QWidget()
         widget.setLayout(main_layout)
         self.setWidget(widget)
-        self.resize(250, 100)
+        self.resize(250, 200)
+        
+    def select_output_folder(self):
+        output_folder = QtWidgets.QFileDialog.getExistingDirectory()
+        self.collect_textEdit.setText(output_folder)
 
 def main():
-    rt.resetMaxFile(rt.name('noPrompt'))
     main_window = qtmax.GetQMaxMainWindow()
     w = PyMaxDockWidget(parent=main_window)
     w.setFloating(True)
