@@ -99,9 +99,8 @@ class PyMaxDockWidget(QtWidgets.QDockWidget):
         plane_objects = get_plane_objects()
         for plane in plane_objects:
             material = plane.getmxsprop("material")
-            base_color_map_path = material.base_color_map.fileName
-            reflectivity_map = material.reflectivity_map.fileName
-            refl_color_map = material.refl_color_map.fileName
+            if material is None:
+                continue
             
             #create a folder for each material with the name of the material
             material_folder = os.path.join(outputFolderPath, material.name)
@@ -109,16 +108,28 @@ class PyMaxDockWidget(QtWidgets.QDockWidget):
                 os.makedirs(material_folder)
                 
             #copy the base color map
-            base_color_map_new_path = os.path.join(material_folder, os.path.basename(base_color_map_path))
-            shutil.copyfile(base_color_map_path, base_color_map_new_path)
+            if material.base_color_map != None:
+                base_color_map_path = material.base_color_map.fileName
+                base_color_map_new_path = os.path.join(material_folder, os.path.basename(base_color_map_path))
+                shutil.copyfile(base_color_map_path, base_color_map_new_path)
+            else:
+                print("Syslog: No base color map for material: {}".format(material.name))
             
             #copy the reflectivity map
-            reflectivity_map_new_path = os.path.join(material_folder, os.path.basename(reflectivity_map))
-            shutil.copyfile(reflectivity_map, reflectivity_map_new_path)
-            
+            if material.reflectivity_map != None:
+                reflectivity_map = material.reflectivity_map.fileName
+                reflectivity_map_new_path = os.path.join(material_folder, os.path.basename(reflectivity_map))
+                shutil.copyfile(reflectivity_map, reflectivity_map_new_path)
+            else:
+                print("Syslog: No reflectivity map for material: {}".format(material.name))
+                
             #copy the refl color map
-            refl_color_map_new_path = os.path.join(material_folder, os.path.basename(refl_color_map))
-            shutil.copyfile(refl_color_map, refl_color_map_new_path)
+            if material.refl_color_map != None:
+                refl_color_map = material.refl_color_map.fileName
+                refl_color_map_new_path = os.path.join(material_folder, os.path.basename(refl_color_map))
+                shutil.copyfile(refl_color_map, refl_color_map_new_path)
+            else:
+                print("Syslog: no refl_color_map for material: {}".format(material.name))
 
 def main():
     main_window = qtmax.GetQMaxMainWindow()
