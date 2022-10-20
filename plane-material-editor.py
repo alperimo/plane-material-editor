@@ -3,6 +3,8 @@ from PySide2 import QtCore
 from PySide2 import QtGui
 from PySide2 import QtWidgets
 
+from PIL import Image
+
 from pymxs import runtime as rt
 import pymxs
 
@@ -128,6 +130,13 @@ class PyMaxDockWidget(QtWidgets.QDockWidget):
                 refl_color_map = material.refl_color_map.fileName
                 refl_color_map_new_path = os.path.join(material_folder, os.path.basename(refl_color_map))
                 shutil.copyfile(refl_color_map, refl_color_map_new_path)
+                
+                #convert the refl color map to .tga
+                refl_color_map_tga = refl_color_map.replace(".dds", ".tga")
+                
+                if not os.path.exists(refl_color_map_tga):
+                    img = Image.open(refl_color_map_new_path)
+                    img.save(refl_color_map_tga)
             else:
                 print("Syslog: no refl_color_map for material: {}".format(material.name))
 
