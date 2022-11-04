@@ -3,7 +3,7 @@ from PySide2 import QtCore
 from PySide2 import QtGui
 from PySide2 import QtWidgets
 
-from PIL import Image
+#from PIL import Image
 
 from pymxs import runtime as rt
 import pymxs
@@ -82,9 +82,37 @@ class PyMaxDockWidget(QtWidgets.QDockWidget):
         collect_asset_layout.addLayout(collect_textField_layout)
         collect_asset_layout.addWidget(collect_assets_btn)
         
+        # Edit Material Texture
+        texture_editor_groupbox = QtWidgets.QGroupBox("Edit Material Textures")
+        
+        texture_editor_layout = QtWidgets.QVBoxLayout(texture_editor_groupbox)
+        
+        texture_editor_basemap_label_usage = QtWidgets.QLabel(
+            "** HINTS: All materials' base map textures for plane object will be replaced with the textures from selected folder and reflectivity and refl color map will be removed. **"
+        )
+        texture_editor_basemap_label_folder_path = QtWidgets.QLabel("Selected Root Directory For Base Map")
+        
+        texture_editor_basemap_textField_layout = QtWidgets.QHBoxLayout()
+        self.texture_editor_basemap_textEdit = QtWidgets.QLineEdit()
+        texture_editor_basemap_textField_selectFolder_btn = QtWidgets.QPushButton("...")
+        texture_editor_basemap_textField_selectFolder_btn.setFixedSize(QtCore.QSize(30, 20))
+        texture_editor_basemap_textField_selectFolder_btn.clicked.connect(self.select_edit_texture_output_folder)
+        
+        texture_editor_btn = QtWidgets.QPushButton("Change")
+        texture_editor_btn.setFixedSize(QtCore.QSize(80, 25))
+        texture_editor_btn.clicked.connect(self.edit_textures_of_material)
+        
+        texture_editor_basemap_textField_layout.addWidget(self.texture_editor_basemap_textEdit)
+        texture_editor_basemap_textField_layout.addWidget(texture_editor_basemap_textField_selectFolder_btn)
+        
+        texture_editor_layout.addWidget(texture_editor_basemap_label_usage)
+        texture_editor_layout.addWidget(texture_editor_basemap_label_folder_path)
+        texture_editor_layout.addLayout(texture_editor_basemap_textField_layout)
+        texture_editor_layout.addWidget(texture_editor_btn) 
+        
         main_layout.addWidget(create_plane_groupbox)
         main_layout.addWidget(collect_asset_groupbox)
-        #main_layout.addWidget(collect_asset_layout)
+        main_layout.addWidget(texture_editor_groupbox)
         
         widget = QtWidgets.QWidget()
         widget.setLayout(main_layout)
@@ -94,6 +122,10 @@ class PyMaxDockWidget(QtWidgets.QDockWidget):
     def select_output_folder(self):
         output_folder = QtWidgets.QFileDialog.getExistingDirectory()
         self.collect_textEdit.setText(output_folder)
+        
+    def select_edit_texture_output_folder(self):
+        output_folder = QtWidgets.QFileDialog.getExistingDirectory()
+        self.texture_editor_basemap_textEdit.setText(output_folder)
         
     def collect_textures_of_material(self):
         outputFolderPath = self.collect_textEdit.text()
@@ -132,13 +164,42 @@ class PyMaxDockWidget(QtWidgets.QDockWidget):
                 shutil.copyfile(refl_color_map, refl_color_map_new_path)
                 
                 #convert the refl color map to .tga
-                refl_color_map_tga = refl_color_map.replace(".dds", ".tga")
+                """refl_color_map_tga = refl_color_map.replace(".dds", ".tga")
                 
                 if not os.path.exists(refl_color_map_tga):
                     img = Image.open(refl_color_map_new_path)
-                    img.save(refl_color_map_tga)
+                    img.save(refl_color_map_tga)"""
             else:
                 print("Syslog: no refl_color_map for material: {}".format(material.name))
+
+    def edit_textures_of_material(self):
+        outputFolderPath = self.texture_editor_basemap_textEdit.text()
+        print("outputFolderPath: {}".format(outputFolderPath))
+        plane_objects = get_plane_objects()
+        for plane in plane_objects:
+            material = plane.getmxsprop("material")
+            if material is None:
+                continue
+            
+            material_folder = os.path.join(outputFolderPath, "".join([material.name, "_Albedo.dds"]))
+            print("material_folder: {}".format(material_folder))
+            
+            if not os.path.exists(material_folder):
+                print("Syslog: No material exists in folder: {}".format(material.name))
+                continue
+            
+            # Create BitMapTexture for base color map
+            bitmap = rt.openBitMap(material_folder)
+            bmt = rt.bitmapTex()
+            bmt.bitmap = bitmap
+            material.setmxsprop("base_color_map", bmt)
+            
+            # Remove reflectivity and refl color map
+            if material.reflectivity_map != None:
+                material.setmxsprop("reflectivity_map", None)
+                
+            if material.refl_color_map != None:
+                material.setmxsprop("refl_color_map", None)
 
 def main():
     main_window = qtmax.GetQMaxMainWindow()
